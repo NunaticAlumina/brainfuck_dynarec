@@ -77,21 +77,7 @@ int brainfuck_interpret(const char* src) {
 	int data_pointer = 0;
 	int output_pointer = 0;
 
-	while (1) {
-		//fetch instruction
-		char instruction = src[++instruction_pointer];
-
-		//end of program
-		if (instruction == 0) {
-			elapsed = clock() - begin;
-			printf("elapsed: %f\n", elapsed / (double)CLOCKS_PER_SEC);
-
-			print_array_as_string(__output);
-			dump_array_32(__memory, 8);
-			dump_array_32(__memory + 8, 8);
-			return RESULT_SUCCESS;
-		}
-
+	while (char instruction = src[++instruction_pointer]) {
 		switch (instruction) {
 		case '>': //increase data pointer
 			++data_pointer; break;
@@ -119,6 +105,14 @@ int brainfuck_interpret(const char* src) {
 			return RESULT_UNEXPECTED_INSTRUCTION;
 		}
 	}
+
+	elapsed = clock() - begin;
+	printf("elapsed: %f\n", elapsed / (double)CLOCKS_PER_SEC);
+
+	print_array_as_string(__output);
+	dump_array_32(__memory, 8);
+	dump_array_32(__memory + 8, 8);
+	return RESULT_SUCCESS;
 }
 
 int brainfuck_dynarec(const char* src) {
