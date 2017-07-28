@@ -69,9 +69,12 @@ int brainfuck_find_matching_close(const char* src, int instruction_pointer) {
 
 int brainfuck_interpret(const char* src) {
 	clock_t begin = clock();
+	
+	int32_t jumps[BUFSIZE];
 
 	memset(__memory, 0, BUFSIZE * sizeof(uint32_t));
 	memset(__output, 0, BUFSIZE * sizeof(uint32_t));
+	memset(jumps, -1, BUFSIZE * sizeof(uint32_t));
 
 	int instruction_pointer = -1;
 	int data_pointer = 0;
@@ -95,11 +98,24 @@ int brainfuck_interpret(const char* src) {
 		case '[': //if the byte at the data pointer is zero, jump to matching ]
 			if (__memory[data_pointer] != 0) continue;
 			instruction_pointer = brainfuck_find_matching_close(src, instruction_pointer);
-			if (instruction_pointer == -1) return RESULT_INVALID_LOOP;			
+			if (instruction_pointer == -1) return RESULT_INVALID_LOOP;
 			break;
-		case ']': //jump to matching [
+		case ']': //jump to matching [			
+			{
+				auto p = jumps[instruction_pointer];
+				if (p == -1) {
+					int last = instruction_pointer;
+					instruction_pointer = brainfuck_find_matching_open(src, instruction_pointer);
+					if (instruction_pointer == -1) return RESULT_INVALID_LOOP;
+					jumps[last] = instruction_pointer;
+				}
+				else
+					instruction_pointer = jumps[instruction_pointer];
+			}			
+			/*
 			instruction_pointer = brainfuck_find_matching_open(src, instruction_pointer);
 			if (instruction_pointer == -1) return RESULT_INVALID_LOOP;
+			*/
 			break;
 		default:
 			return RESULT_UNEXPECTED_INSTRUCTION;
