@@ -13,16 +13,29 @@
 #define RESULT_UNEXPECTED_INSTRUCTION 1
 #define RESULT_INVALID_LOOP 2
 
-static char __memory[BUFSIZE];
-static char __output[BUFSIZE];
+static uint32_t __memory[BUFSIZE];
+static uint32_t __output[BUFSIZE];
+static clock_t elapsed = 0;
 
-void dump_array(const char* arr, uint32_t len) {
+void dump_array_8(const uint32_t* arr, uint32_t len) {
 	for (int u = 0; u < len; ++u) {
 		printf("%02X ", 0xFF & arr[u]);
 	}
 	putchar('\n');
 }
 
+void dump_array_32(const uint32_t* arr, uint32_t len) {
+	for (int u = 0; u < len; ++u) {
+		printf("%08X ", arr[u]);
+	}
+	putchar('\n');
+}
+
+void print_array_as_string(const uint32_t* arr) {
+	const uint32_t* p = arr;
+	while (uint32_t val = *p++)
+		putchar(0xFF & val);
+}
 
 int brainfuck_find_matching_open(const char* src, int instruction_pointer) {
 	int stack = -1;
@@ -55,8 +68,10 @@ int brainfuck_find_matching_close(const char* src, int instruction_pointer) {
 }
 
 int brainfuck_interpret(const char* src) {
-	memset(__memory, 0, BUFSIZE);
-	memset(__output, 0, BUFSIZE);
+	clock_t begin = clock();
+
+	memset(__memory, 0, BUFSIZE * sizeof(uint32_t));
+	memset(__output, 0, BUFSIZE * sizeof(uint32_t));
 
 	int instruction_pointer = -1;
 	int data_pointer = 0;
@@ -68,8 +83,12 @@ int brainfuck_interpret(const char* src) {
 
 		//end of program
 		if (instruction == 0) {
-			//printf("brainfuck_interpret: %s", __output);
-			dump_array(__memory, 0x10);
+			elapsed = clock() - begin;
+			printf("elapsed: %f\n", elapsed / (double)CLOCKS_PER_SEC);
+
+			print_array_as_string(__output);
+			dump_array_32(__memory, 8);
+			dump_array_32(__memory + 8, 8);
 			return RESULT_SUCCESS;
 		}
 
@@ -103,6 +122,8 @@ int brainfuck_interpret(const char* src) {
 }
 
 int brainfuck_dynarec(const char* src) {
+	clock_t begin = clock();
+
 	std::unordered_map<int, uint32_t> jumps;
 
 	auto h = codegen_alloc();
@@ -182,13 +203,12 @@ int brainfuck_dynarec(const char* src) {
 
 	codegen_run(h);
 
-	//dump_array(h->data, 0x10);
-	char output[0x10] = { 0 };
-	for (int u = 0; u < 0x10 - 1; ++u) {
-		output[u] = reinterpret_cast<uint32_t*>(__output)[u];
-	}
+	elapsed = clock() - begin;
+	printf("elapsed: %f\n", elapsed / (double)CLOCKS_PER_SEC);
 
-	printf("output: %s\n", output);
+	print_array_as_string(__output);
+	dump_array_32((uint32_t*)h->data, 8);
+	dump_array_32((uint32_t*)h->data + 8, 8);
 
 	codegen_free(h);
 
@@ -286,7 +306,6 @@ void codegen_test()
 
 	codegen_free(h);
 }
-*/
 
 void codegen_test()
 {
@@ -316,20 +335,24 @@ void codegen_test()
 
 	codegen_free(h);
 }
+*/
 
 int main() {
 	//hello world
-	const char* brainfuck_source = "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.";
+	//const char* brainfuck_source = "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.";
 	
 	//simple loop
 	//const char* brainfuck_source = "++[>++<-]";
+
+	//long loop
+	const char* brainfuck_source = "++++[>++++<-]>[>++++<-]>[>++++<-]>[>++++<-]>[>++++<-]>[>++++<-]>[>++++<-]>[>++++<-]>[>++++<-]>[>++++<-]>[>++++<-]";
 		
 	//const char* brainfuck_source = "++>++++";
 	
 	//codegen_test();
 
-	//brainfuck_interpret(brainfuck_source);
-	int result = brainfuck_dynarec(brainfuck_source);
+	brainfuck_interpret(brainfuck_source);
+	brainfuck_dynarec(brainfuck_source);
 	//printf("result: %d", result);
 
 	return 0;
